@@ -1,4 +1,6 @@
-namespace EqSpellData;
-public interface ISpellReader
+namespace EqSpellData
 {
+    public interface ISpellReader
+    {
+    }
 }

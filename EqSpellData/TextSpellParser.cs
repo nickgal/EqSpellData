@@ -1,52 +1,58 @@
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 
-namespace EqSpellData;
-public class TextSpellParser : ISpellParser
+namespace EqSpellData
 {
-    public ConcurrentDictionary<int, SpellData> Spells { get; private set; } = [];
-    public SpellFileFormat Format { get; private set; }
-
-    private readonly Stream _stream;
-
-    public TextSpellParser(Stream stream, SpellFileFormat spellFileFormat)
+    public class TextSpellParser : ISpellParser
     {
-        _stream = stream;
-        Format = spellFileFormat;
-    }
+        public ConcurrentDictionary<int, SpellData> Spells { get; private set; } = new();
+        public SpellFileFormat Format { get; private set; }
 
-    public void Parse()
-    {
-        ParseAsync().GetAwaiter().GetResult();
-    }
+        private readonly Stream _stream;
 
-    public async Task ParseAsync()
-    {
-        using var sr = new StreamReader(_stream);
-        string? line;
-        List<string> lines = [];
-
-        while ((line = await sr.ReadLineAsync().ConfigureAwait(false)) != null)
+        public TextSpellParser(Stream stream, SpellFileFormat spellFileFormat)
         {
-            if (!string.IsNullOrWhiteSpace(line))
-            {
-                lines.Add(line);
-            }
+            _stream = stream;
+            Format = spellFileFormat;
         }
 
-        Parallel.ForEach(lines, l =>
+        public void Parse()
         {
-            TextSpellReader spellReader = new(Format);
-            SpellData? spell = spellReader.ParseLine(l);
-            if (spell != null)
-            {
-                Spells.TryAdd(spell.SpellIndex, spell);
-            }
-        });
-    }
+            ParseAsync().GetAwaiter().GetResult();
+        }
 
-    public void Dispose()
-    {
-        _stream.Dispose();
-        GC.SuppressFinalize(this);
+        public async Task ParseAsync()
+        {
+            using var sr = new StreamReader(_stream);
+            string? line;
+            List<string> lines = new();
+
+            while ((line = await sr.ReadLineAsync().ConfigureAwait(false)) != null)
+            {
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    lines.Add(line);
+                }
+            }
+
+            Parallel.ForEach(lines, l =>
+            {
+                TextSpellReader spellReader = new(Format);
+                SpellData? spell = spellReader.ParseLine(l);
+                if (spell != null)
+                {
+                    Spells.TryAdd(spell.SpellIndex, spell);
+                }
+            });
+        }
+
+        public void Dispose()
+        {
+            _stream.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 }

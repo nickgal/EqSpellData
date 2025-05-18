@@ -1,44 +1,49 @@
+using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Threading.Tasks;
 
-namespace EqSpellData;
-public class BinarySpellParser : ISpellParser
+namespace EqSpellData
 {
-    public ConcurrentDictionary<int, SpellData> Spells { get; private set; } = [];
-    public SpellFileFormat Format { get; private set; }
-
-    private readonly Stream _stream;
-
-    public BinarySpellParser(Stream stream, SpellFileFormat spellFileFormat)
+    public class BinarySpellParser : ISpellParser
     {
-        _stream = stream;
-        Format = spellFileFormat;
-    }
+        public ConcurrentDictionary<int, SpellData> Spells { get; private set; } = new();
+        public SpellFileFormat Format { get; private set; }
 
-    public void Parse()
-    {
-        int idx = 0;
-        using var br = new BinaryReader(_stream);
-        BinarySpellReader spellReader = new(Format);
+        private readonly Stream _stream;
 
-        while (br.PeekChar() != -1)
+        public BinarySpellParser(Stream stream, SpellFileFormat spellFileFormat)
         {
-            SpellData? spell = spellReader.ParseBytes(br);
-            if (spell != null)
+            _stream = stream;
+            Format = spellFileFormat;
+        }
+
+        public void Parse()
+        {
+            int idx = 0;
+            using var br = new BinaryReader(_stream);
+            BinarySpellReader spellReader = new(Format);
+
+            while (br.PeekChar() != -1)
             {
-                spell.SpellIndex = idx++;
-                Spells.TryAdd(spell.SpellIndex, spell);
+                SpellData? spell = spellReader.ParseBytes(br);
+                if (spell != null)
+                {
+                    spell.SpellIndex = idx++;
+                    Spells.TryAdd(spell.SpellIndex, spell);
+                }
             }
         }
-    }
 
-    public async Task ParseAsync()
-    {
-        await Task.Run(Parse);
-    }
+        public async Task ParseAsync()
+        {
+            await Task.Run(Parse);
+        }
 
-    public void Dispose()
-    {
-        _stream.Dispose();
-        GC.SuppressFinalize(this);
+        public void Dispose()
+        {
+            _stream.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 }
